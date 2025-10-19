@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub PR Student Comment Icons",
+  "version": "1.0.0",
+  "description": "Injects 6 clickable icons into GitHub Pull Request comments to quickly reply to their work.",
+  "icons": {
+    "16": "icons/icon1.svg",
+    "48": "icons/icon2.svg",
+    "128": "icons/icon3.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*/*/pull/*"],
+      "js": ["content_script.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://vincentsijben.github.io/*",
+    "https://*.github.io/*"
+    ,"https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+  ,
+  "web_accessible_resources": [
+    {
+      "resources": ["page_fetcher.js"],
+      "matches": ["https://github.com/*"]
+    }
+  ]
+  ,
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
