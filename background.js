@@ -6,6 +6,7 @@ self.addEventListener('message', async (event) => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  try { console.debug('[gh-pr-icons][bg] onMessage', msg && msg.action, msg); } catch (e) {}
   if (!msg || !msg.action) return;
   if (msg.action === 'fetchImages') {
     const url = msg.url;
@@ -47,6 +48,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         const abs = found.map(u => { try { return new URL(u, url).href } catch (e) { return null } }).filter(Boolean);
         const dedup = Array.from(new Set(abs));
+        try { console.debug('[gh-pr-icons][bg] fetchImages found', dedup.length, 'images for', url); } catch (e) {}
         sendResponse({ ok: true, images: dedup });
       } catch (err) {
         console.debug('[gh-pr-icons] fetchImages error', err);
@@ -109,6 +111,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         // dedupe
         const dedup = Array.from(new Set(images.filter(Boolean)));
+        try { console.debug('[gh-pr-icons][bg] fetchImagesApi found', dedup.length, 'images for', apiUrl); } catch (e) {}
         sendResponse({ ok: true, images: dedup });
       } catch (err) {
         sendResponse({ ok: false, error: String(err) });

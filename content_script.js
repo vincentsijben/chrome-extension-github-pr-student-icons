@@ -1,8 +1,13 @@
 // content_script.js
 // Lightweight overlay icons with a test "merge+like" action.
 
+console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
+
 (function () {
   'use strict';
+
+  console.log('[gh-pr-icons] Script loaded on', window.location.href);
+  console.log('[gh-pr-icons] Chrome runtime available:', typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
   const ICON_COUNT = 6;
 
@@ -55,8 +60,9 @@
       }
       t.textContent = msg;
       t.style.display = 'block';
-      setTimeout(() => { try { t.style.display = 'none'; } catch (e) {} }, ms);
-    } catch (e) { console.error(e); }
+      t.style.opacity = '1';
+      setTimeout(() => { try { t.style.opacity = '0'; setTimeout(() => { t.style.display = 'none'; }, 200); } catch (e) {} }, ms);
+    } catch (e) { console.error('[gh-pr-icons] showToast error:', e); }
   }
 
   function ensureTooltip() {
@@ -201,7 +207,9 @@
   }
 
   function buildOverlay() {
+    console.log('[gh-pr-icons] buildOverlay called');
     const o = createOverlay();
+    console.log('[gh-pr-icons] overlay element created:', o);
     // top controls: toggle, refresh, options, test
     const controls = document.createElement('div');
     controls.style.display = 'flex';
@@ -211,7 +219,6 @@
     controls.style.marginBottom = '6px';
 
     buildToggle(controls);
-    buildRefresh(controls);
 
     const opt = document.createElement('button');
     opt.type = 'button';
@@ -221,8 +228,6 @@
       try { chrome.runtime.sendMessage({ action: 'openOptions' }, (resp) => { if (!resp || !resp.ok) { try { chrome.runtime.openOptionsPage(); } catch (e) { window.open(chrome.runtime.getURL('options.html')); } } }); } catch (e) { try { chrome.runtime.openOptionsPage(); } catch (e2) { window.open(chrome.runtime.getURL('options.html')); } }
     });
     controls.appendChild(opt);
-
-    buildTestApiButton(controls);
 
     o.appendChild(controls);
 
@@ -298,9 +303,10 @@
     try {
       const cacheKey = `gh_pr_images_${baseUrl}`;
       const list = await new Promise(r => { try { chrome.storage.local.get([cacheKey], res => r(res && res[cacheKey] ? res[cacheKey] : [])); } catch (e) { r([]); } });
+      console.log('[gh-pr-icons] pickRandomImageForCategory cacheKey:', cacheKey, 'list length:', list ? list.length : 0);
       if (!list || !list.length) return null;
       return list[Math.floor(Math.random() * list.length)];
-    } catch (e) { return null; }
+    } catch (e) { console.error('[gh-pr-icons] pickRandomImageForCategory error:', e); return null; }
   }
 
   function mapToPagesUrl(url) { try { const u = new URL(url); if (/github\.io$/i.test(u.hostname)) return `${u.protocol}//${u.hostname}${u.pathname}`; if (/raw\.githubusercontent\.com$/i.test(u.hostname)) { const parts = u.pathname.split('/').filter(Boolean); if (parts.length >= 4) { const owner = parts[0], repo = parts[1]; const rest = parts.slice(3).join('/').replace(/^docs\//, ''); return `https://${owner}.github.io/${repo}/${rest}`; } } return url; } catch (e) { return url; } }
@@ -340,8 +346,14 @@
         const ta = form.querySelector('textarea, textarea.js-comment-field, textarea[name="comment[body]"]');
         if (!ta) { showToast('No composer textarea found'); return; }
         const cat = folders[idx];
+        console.log('[gh-pr-icons] Picking random image for category:', cat);
         const imgUrl = await pickRandomImageForCategory(cat);
-        if (!imgUrl) { showNoImagesAdvice(); return; }
+        console.log('[gh-pr-icons] Picked image URL:', imgUrl);
+        if (!imgUrl) { 
+          console.log('[gh-pr-icons] No images available, showing toast');
+          showToast('No images available — open Options and click "Refetch images"', 5000);
+          return; 
+        }
         const pages = mapToPagesUrl(imgUrl);
         const markdown = `![](${pages})\n`;
         // We'll avoid mutating the visible composer if we can post via API (fast path).
@@ -508,6 +520,17 @@
     });
   }
 
+  // Helper to get stored GitHub token
+  async function getStoredToken() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get(['githubToken'], (res) => {
+          resolve(res && res.githubToken ? res.githubToken : null);
+        });
+      } catch (e) { resolve(null); }
+    });
+  }
+
   const AUTO_SUBMIT_KEY = 'gh_pr_icons_auto_submit';
   let _autoSubmit = true;
   try { chrome.storage.local.get([AUTO_SUBMIT_KEY], (res) => { if (res && (res[AUTO_SUBMIT_KEY] === true || res[AUTO_SUBMIT_KEY] === '1')) _autoSubmit = true; else if (res && res[AUTO_SUBMIT_KEY] === false) _autoSubmit = false; }); } catch (e) {}
@@ -534,7 +557,15 @@
 
   // ...existing code...
 
-  function start() { buildOverlay(); }
+  function start() { 
+    console.log('[gh-pr-icons] start() called, readyState:', document.readyState);
+    try {
+      buildOverlay();
+      console.log('[gh-pr-icons] buildOverlay completed successfully');
+    } catch (e) {
+      console.error('[gh-pr-icons] Error in start():', e);
+    }
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 
 })();

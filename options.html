@@ -28,6 +28,40 @@
         </div>
       </section>
 
+      <section>
+        <h2>Images</h2>
+        <p>Fetch fresh images from all categories. The extension will download the latest image lists from your GitHub Pages repository.</p>
+        <div class="row">
+          <button id="refetch-images">Refetch images</button>
+        </div>
+        <div id="image-counts" class="image-counts">
+          <div class="count-item">
+            <span class="category-name">👍 Like:</span>
+            <span id="count-like" class="count-value">-</span>
+          </div>
+          <div class="count-item">
+            <span class="category-name">🔗 Broken link:</span>
+            <span id="count-slap" class="count-value">-</span>
+          </div>
+          <div class="count-item">
+            <span class="category-name">💻 Missing screenshot:</span>
+            <span id="count-screenshot" class="count-value">-</span>
+          </div>
+          <div class="count-item">
+            <span class="category-name">🤡 Missing profile:</span>
+            <span id="count-profile" class="count-value">-</span>
+          </div>
+          <div class="count-item">
+            <span class="category-name">👎 Pages broken:</span>
+            <span id="count-sad" class="count-value">-</span>
+          </div>
+          <div class="count-item">
+            <span class="category-name">🆘 SOS:</span>
+            <span id="count-facepalm" class="count-value">-</span>
+          </div>
+        </div>
+      </section>
+
       <div id="status" role="status" aria-live="polite"></div>
     </main>
     <script src="options.js"></script>

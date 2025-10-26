@@ -1,9 +1,19 @@
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:#fff;color:#222;padding:20px}
 main{max-width:720px;margin:8px auto}
 h1{font-size:18px;margin-bottom:12px}
+h2{font-size:16px;margin-top:20px;margin-bottom:8px}
 label{display:block;margin-bottom:6px}
 input[type=text]{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px}
 .row{display:flex;gap:8px;margin-top:8px}
 button{padding:8px 10px;border-radius:6px;border:1px solid #888;background:#f6f8fa;cursor:pointer}
+button:hover{background:#e1e4e8}
 .muted{color:#666;font-size:13px;margin-top:8px}
 #status{margin-top:12px;color:green}
+.image-counts{margin-top:12px;padding:12px;background:#f6f8fa;border-radius:6px;border:1px solid #e1e4e8}
+.count-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e1e4e8}
+.count-item:last-child{border-bottom:none}
+.category-name{font-weight:500;color:#24292f}
+.count-value{color:#666;font-family:ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,Liberation Mono,monospace}
+.count-value.loading{color:#999;font-style:italic}
+.count-value.error{color:#d73a49}
+
