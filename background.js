@@ -168,6 +168,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.action === 'checkRateLimit') {
+    const token = msg.token;
+    if (!token) return sendResponse({ ok: false, error: 'No token provided' });
+    
+    (async () => {
+      try {
+        const res = await fetch('https://api.github.com/rate_limit', {
+          headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        
+        if (!res.ok) {
+          const retryAfter = res.headers.get('retry-after');
+          let message = `HTTP ${res.status}: ${res.statusText}`;
+          if (res.status === 403 && retryAfter) {
+            message += ` - Secondary rate limit. Retry after ${retryAfter}s`;
+          }
+          return sendResponse({ ok: false, error: message });
+        }
+        
+        const data = await res.json();
+        const retryAfter = res.headers.get('retry-after');
+        
+        sendResponse({ 
+          ok: true, 
+          data: data.resources,
+          retryAfter: retryAfter ? parseInt(retryAfter) : null
+        });
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+
   if (msg.action === 'postComment') {
     // msg: { owner, repo, pull_number, body }
     const { owner, repo, pull_number, body } = msg;
@@ -176,6 +213,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const token = (res && res.githubToken) ? res.githubToken : '';
         if (!token) return sendResponse({ ok: false, error: 'No token saved' });
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/issues/${pull_number}/comments`;
+        console.debug('[gh-pr-icons][bg] Posting comment to:', apiUrl);
         const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' };
         try {
           const bodyJson = JSON.stringify({ body });

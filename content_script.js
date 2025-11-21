@@ -1,13 +1,8 @@
 // content_script.js
 // Lightweight overlay icons with a test "merge+like" action.
 
-console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
-
 (function () {
   'use strict';
-
-  console.log('[gh-pr-icons] Script loaded on', window.location.href);
-  console.log('[gh-pr-icons] Chrome runtime available:', typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
   const ICON_COUNT = 6;
 
@@ -207,9 +202,7 @@ console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
   }
 
   function buildOverlay() {
-    console.log('[gh-pr-icons] buildOverlay called');
     const o = createOverlay();
-    console.log('[gh-pr-icons] overlay element created:', o);
     // top controls: toggle, refresh, options, test
     const controls = document.createElement('div');
     controls.style.display = 'flex';
@@ -303,10 +296,9 @@ console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
     try {
       const cacheKey = `gh_pr_images_${baseUrl}`;
       const list = await new Promise(r => { try { chrome.storage.local.get([cacheKey], res => r(res && res[cacheKey] ? res[cacheKey] : [])); } catch (e) { r([]); } });
-      console.log('[gh-pr-icons] pickRandomImageForCategory cacheKey:', cacheKey, 'list length:', list ? list.length : 0);
       if (!list || !list.length) return null;
       return list[Math.floor(Math.random() * list.length)];
-    } catch (e) { console.error('[gh-pr-icons] pickRandomImageForCategory error:', e); return null; }
+    } catch (e) { return null; }
   }
 
   function mapToPagesUrl(url) { try { const u = new URL(url); if (/github\.io$/i.test(u.hostname)) return `${u.protocol}//${u.hostname}${u.pathname}`; if (/raw\.githubusercontent\.com$/i.test(u.hostname)) { const parts = u.pathname.split('/').filter(Boolean); if (parts.length >= 4) { const owner = parts[0], repo = parts[1]; const rest = parts.slice(3).join('/').replace(/^docs\//, ''); return `https://${owner}.github.io/${repo}/${rest}`; } } return url; } catch (e) { return url; } }
@@ -346,76 +338,146 @@ console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
         const ta = form.querySelector('textarea, textarea.js-comment-field, textarea[name="comment[body]"]');
         if (!ta) { showToast('No composer textarea found'); return; }
         const cat = folders[idx];
-        console.log('[gh-pr-icons] Picking random image for category:', cat);
         const imgUrl = await pickRandomImageForCategory(cat);
-        console.log('[gh-pr-icons] Picked image URL:', imgUrl);
         if (!imgUrl) { 
-          console.log('[gh-pr-icons] No images available, showing toast');
           showToast('No images available — open Options and click "Refetch images"', 5000);
           return; 
         }
         const pages = mapToPagesUrl(imgUrl);
         const markdown = `![](${pages})\n`;
-        // We'll avoid mutating the visible composer if we can post via API (fast path).
-        // Determine if we intend to merge (merge-after-like) and if a token exists.
-        const pr = parsePullFromUrl(window.location.href);
-        const mergeWanted = (idx === 1) ? await getMergeAfterLike() : false;
-        const hasToken = await new Promise((resolve) => { try { chrome.storage.local.get(['githubToken'], (res) => resolve(!!(res && res.githubToken))); } catch (e) { resolve(false); } });
-        const willUseApi = !!(pr && mergeWanted && hasToken);
-        if (!willUseApi) {
-          // Only touch the composer when not using the API-post fast path
-          ta.value = markdown;
-          dispatchInputChange(ta);
-          ta.focus();
-        }
+        
+        // Always use DOM manipulation (no API posting)
+        ta.value = markdown;
+        dispatchInputChange(ta);
+        ta.focus();
 
-        if (getAutoSubmit()) {
-          // If we have a token, prefer the background API to post the comment server-side (fast/reliable)
-          // (we already computed pr, mergeWanted and hasToken above; willUseApi indicates the fast path)
-          if (willUseApi) {
-            showToast('Posting comment via API...');
-            // Post comment via background
-            const body = markdown.trim();
-            const resp = await new Promise((resolve) => {
-              try { chrome.runtime.sendMessage({ action: 'postComment', owner: pr.owner, repo: pr.repo, pull_number: pr.pull_number, body }, (r) => resolve(r)); } catch (e) { resolve({ ok: false, error: String(e) }); }
-            });
-              console.debug('[gh-pr-icons] postComment resp', resp);
-              if (!resp || !resp.ok) { showToast('API comment failed: ' + (resp && resp.error ? resp.error : 'unknown'), 6000); return; }
-              showToast('Comment posted (API) — prompting to merge');
-              const ok = await showConfirmModal('Merge PR', 'Also merge this PR now?');
-              if (!ok) { showToast('Merge cancelled'); return; }
-              try {
-                const payload = Object.assign({ action: 'mergePr' }, pr);
-                console.debug('[gh-pr-icons] sending mergePr', payload);
-                chrome.runtime.sendMessage(payload, (resp2) => {
-                  console.debug('[gh-pr-icons] mergePr response', resp2);
-                  if (resp2 && resp2.ok) showToast('PR merged!');
-                  else showToast('Merge failed: ' + (resp2 && resp2.error ? resp2.error : 'unknown'), 6000);
-                });
-              } catch (e) { console.error('[gh-pr-icons] merge send error', e); showToast('Merge failed (send error)'); }
-              return;
-            }
-
-          // Fallback: no token or not merging -> submit via DOM and wait for detection as before
+        const autoSubmit = getAutoSubmit();
+        console.log('[gh-pr-icons] Auto-submit enabled:', autoSubmit);
+        if (autoSubmit) {
           showToast('Submitting comment...');
           const didSubmit = await submitForm(form);
+          console.log('[gh-pr-icons] Form submitted:', didSubmit);
           if (!didSubmit) { showToast('Failed to submit comment'); return; }
-          if (idx === 1 && await getMergeAfterLike()) {
+          
+          // If this is the like button and merge-after-like is enabled, wait for comment then merge
+          const mergeAfterLike = await getMergeAfterLike();
+          console.log('[gh-pr-icons] Icon index:', idx, 'Merge-after-like setting:', mergeAfterLike);
+          if (idx === 1 && mergeAfterLike) {
+            console.log('[gh-pr-icons] Merge-after-like enabled, starting merge flow');
             showToast('Waiting for posted comment to appear...');
             const found = await waitForCommentPost(pages, 12000);
-            if (!found) { showToast('Posted comment not detected — aborting merge', 5000); return; }
+            if (!found) { 
+              console.log('[gh-pr-icons] Comment not detected, aborting');
+              showToast('Posted comment not detected — aborting merge', 5000); 
+              return; 
+            }
+            console.log('[gh-pr-icons] Comment detected, prompting user');
             showToast('Posted comment detected — prompting to merge');
-            const ok2 = await showConfirmModal('Merge PR', 'Also merge this PR now?');
-            if (!ok2) { showToast('Merge cancelled'); return; }
-            try {
-              const payload = Object.assign({ action: 'mergePr' }, pr);
-              console.debug('[gh-pr-icons] sending mergePr', payload);
-              chrome.runtime.sendMessage(payload, (resp2) => {
-                console.debug('[gh-pr-icons] mergePr response', resp2);
-                if (resp2 && resp2.ok) showToast('PR merged!');
-                else showToast('Merge failed: ' + (resp2 && resp2.error ? resp2.error : 'unknown'), 6000);
+            const ok = await showConfirmModal('Merge PR', 'Also merge this PR now?');
+            if (!ok) { 
+              console.log('[gh-pr-icons] User cancelled merge');
+              showToast('Merge cancelled'); 
+              return; 
+            }
+            
+            console.log('[gh-pr-icons] User confirmed, searching for merge button');
+            // Find the merge button
+            const mergeSelectors = [
+              '[aria-label*="Merge"]',
+              'button[data-details-container=".js-merge-pr"]',
+              '.merge-message button.btn-group-merge',
+              'button.js-merge-commit-button'
+            ];
+            
+            // Try to find merge button - GitHub's structure has changed
+            // Look for buttons with merge-related text or attributes
+            console.log('[gh-pr-icons] Searching for merge button...');
+            const allButtons = Array.from(document.querySelectorAll('button, [role="button"]'));
+            console.log('[gh-pr-icons] Found', allButtons.length, 'total buttons on page');
+            
+            const mergeButtons = allButtons.filter(btn => {
+              const text = (btn.textContent || '').toLowerCase().trim();
+              const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+              const dataAttrs = Array.from(btn.attributes || []).map(a => `${a.name}=${a.value}`).join(' ').toLowerCase();
+              
+              return text.includes('merge') || ariaLabel.includes('merge') || dataAttrs.includes('merge');
+            });
+            
+            console.log('[gh-pr-icons] Found', mergeButtons.length, 'merge-related buttons:', mergeButtons.map(b => ({
+              text: (b.textContent || '').trim().substring(0, 50),
+              ariaLabel: b.getAttribute('aria-label'),
+              classes: b.className,
+              disabled: b.disabled,
+              tag: b.tagName
+            })));
+            
+            // Find the primary merge button (usually has "Merge pull request" text or aria-label)
+            let mergeBtn = mergeButtons.find(btn => {
+              const text = (btn.textContent || '').toLowerCase().trim();
+              const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+              return (text === 'merge pull request' || text.startsWith('merge pull request') || 
+                      ariaLabel === 'merge pull request' || ariaLabel.startsWith('merge pull request')) &&
+                     !btn.disabled;
+            });
+            
+            // Fallback: any button with "merge" that's not disabled
+            if (!mergeBtn) {
+              console.log('[gh-pr-icons] Primary merge button not found, trying fallback');
+              mergeBtn = mergeButtons.find(btn => !btn.disabled);
+            }
+            
+            if (mergeBtn) {
+              console.log('[gh-pr-icons] Selected merge button:', {
+                text: mergeBtn.textContent.trim().substring(0, 50),
+                ariaLabel: mergeBtn.getAttribute('aria-label'),
+                tag: mergeBtn.tagName
               });
-            } catch (e) { console.error('[gh-pr-icons] merge send error', e); showToast('Merge failed (send error)'); }
+            }
+            
+            if (mergeBtn && typeof mergeBtn.click === 'function') {
+              console.log('[gh-pr-icons] Clicking merge button:', mergeBtn);
+              mergeBtn.click();
+              showToast('Merging...');
+              
+              // Wait for confirmation dialog and click confirm
+              setTimeout(() => {
+                console.log('[gh-pr-icons] Looking for confirmation button...');
+                const allVisibleButtons = Array.from(document.querySelectorAll('button, input[type="submit"]')).filter(b => {
+                  const style = window.getComputedStyle(b);
+                  return style.display !== 'none' && style.visibility !== 'hidden' && b.offsetParent !== null;
+                });
+                console.log('[gh-pr-icons] Found', allVisibleButtons.length, 'visible buttons');
+                
+                let confirmBtn = allVisibleButtons.find(b => {
+                  const text = (b.textContent || b.value || '').trim().toLowerCase();
+                  return text === 'confirm merge' && !b.disabled;
+                });
+                
+                if (!confirmBtn) {
+                  console.log('[gh-pr-icons] Exact match not found, trying partial match');
+                  confirmBtn = allVisibleButtons.find(b => {
+                    const text = (b.textContent || b.value || '').trim().toLowerCase();
+                    return text.includes('confirm') && text.includes('merge') && !b.disabled;
+                  });
+                }
+                
+                if (confirmBtn) {
+                  console.log('[gh-pr-icons] Found confirm button:', confirmBtn.textContent.trim());
+                }
+                
+                if (confirmBtn && typeof confirmBtn.click === 'function') {
+                  console.log('[gh-pr-icons] Clicking confirm button');
+                  confirmBtn.click();
+                  showToast('PR merged!');
+                } else {
+                  console.log('[gh-pr-icons] Confirm button not found or not clickable');
+                  showToast('Please confirm merge manually', 4000);
+                }
+              }, 800);
+            } else {
+              console.log('[gh-pr-icons] Merge button not found or not clickable');
+              showToast('Merge button not found', 4000);
+            }
           }
         } else {
           showToast('Inserted image (auto-submit disabled)');
@@ -450,58 +512,51 @@ console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
     const normalize = s => (s || '').replace(/\s+/g, ' ').trim();
     const needle = normalize(expectedText);
     if (!needle) return false;
-    // derive filename to match against img srcs
     let filename = null;
     try { filename = (new URL(needle)).pathname.split('/').filter(Boolean).pop() || null; } catch (e) { filename = null; }
+    
+    const initialCommentCount = document.querySelectorAll('.timeline-comment').length;
+    
     const selectors = [
-      '.js-comment-body',
-      '.comment-body',
-      '.timeline-comment .comment-body',
-      '.comment-body p',
-      '.markdown-body'
+      '.timeline-comment img',
+      '.comment-body img',
+      'img[src*="github.io"]'
     ];
     const start = Date.now();
     return await new Promise((resolve) => {
       const check = () => {
-        // text match
-        for (const sel of selectors) {
-          const nodes = Array.from(document.querySelectorAll(sel));
-          for (const n of nodes) {
-            try {
-              const text = normalize(n.innerText || n.textContent || '');
-              if (!text) continue;
-              if (text.includes(needle) || needle.includes(text)) { console.debug('[gh-pr-icons] waitForCommentPost: text match', sel); resolve(true); return; }
-            } catch (e) { /* ignore */ }
+        const elapsed = Date.now() - start;
+        
+        const currentCommentCount = document.querySelectorAll('.timeline-comment').length;
+        if (currentCommentCount > initialCommentCount) {
+          const newComments = Array.from(document.querySelectorAll('.timeline-comment')).slice(initialCommentCount);
+          for (const comment of newComments) {
+            if (comment.querySelectorAll('img').length > 0) {
+              resolve(true);
+              return;
+            }
           }
         }
 
-        // image src match
+        // Fallback: image src match
         try {
           const imgs = Array.from(document.querySelectorAll('img'));
           for (const im of imgs) {
             try {
               const src = im.src || '';
-              if (!src) continue;
-              if (needle && src.includes(needle)) { console.debug('[gh-pr-icons] waitForCommentPost: img src includes needle', src); resolve(true); return; }
-              if (filename && src.includes(filename)) { console.debug('[gh-pr-icons] waitForCommentPost: img src includes filename', src); resolve(true); return; }
+              if (src && ((needle && src.includes(needle)) || (filename && src.includes(filename)))) {
+                resolve(true);
+                return;
+              }
             } catch (e) {}
           }
         } catch (e) {}
 
-        // anchor href match
-        try {
-          const links = Array.from(document.querySelectorAll('a'));
-          for (const a of links) {
-            try {
-              const href = a.href || '';
-              if (!href) continue;
-              if (needle && href.includes(needle)) { console.debug('[gh-pr-icons] waitForCommentPost: link href includes needle', href); resolve(true); return; }
-              if (filename && href.includes(filename)) { console.debug('[gh-pr-icons] waitForCommentPost: link href includes filename', href); resolve(true); return; }
-            } catch (e) {}
-          }
-        } catch (e) {}
-
-        if (Date.now() - start > timeoutMs) { console.debug('[gh-pr-icons] waitForCommentPost: timeout'); resolve(false); return; }
+        if (elapsed > timeoutMs) { 
+          resolve(false); 
+          return; 
+        }
+        
         // keep polling
         setTimeout(check, 700);
       };
@@ -558,10 +613,8 @@ console.log('[gh-pr-icons] TOP LEVEL - Script file is being parsed');
   // ...existing code...
 
   function start() { 
-    console.log('[gh-pr-icons] start() called, readyState:', document.readyState);
     try {
       buildOverlay();
-      console.log('[gh-pr-icons] buildOverlay completed successfully');
     } catch (e) {
       console.error('[gh-pr-icons] Error in start():', e);
     }

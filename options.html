@@ -10,22 +10,84 @@
     <main>
       <h1>GitHub PR Icons — Options</h1>
 
-      <section>
-        <label for="token">GitHub Personal Access Token</label>
-        <input id="token" type="text" placeholder="Paste token here (optional)" />
-        <div class="row">
-          <button id="save">Save token</button>
-          <button id="clear-token">Clear token</button>
+      <section id="rateLimitSection">
+        <h2>GitHub API Rate Limit</h2>
+        <div id="rateLimitInfo" style="margin: 10px 0; padding: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;">
+          <div style="margin-bottom: 12px; font-size: 16px;">
+            <strong>Remaining calls:</strong> <span id="rateLimitRemaining" style="font-family: monospace; font-size: 18px; font-weight: bold;">-</span> / <span id="rateLimitLimit" style="font-family: monospace;">-</span>
+          </div>
+          <details style="margin-bottom: 12px;">
+            <summary style="cursor: pointer; font-weight: 600; margin-bottom: 8px;">Show detailed rate limit info</summary>
+            <div style="padding: 8px 0; font-size: 13px;">
+              <div style="margin-bottom: 6px;">
+                <strong>Core API:</strong>
+                <div style="padding-left: 16px; font-family: monospace;">
+                  <div>Remaining: <span id="rateLimitCoreRemaining">-</span></div>
+                  <div>Limit: <span id="rateLimitCoreLimit">-</span></div>
+                  <div>Used: <span id="rateLimitCoreUsed">-</span></div>
+                  <div>Resets at: <span id="rateLimitCoreReset">-</span></div>
+                </div>
+              </div>
+              <div style="margin-bottom: 6px;">
+                <strong>Search API:</strong>
+                <div style="padding-left: 16px; font-family: monospace;">
+                  <div>Remaining: <span id="rateLimitSearchRemaining">-</span></div>
+                  <div>Limit: <span id="rateLimitSearchLimit">-</span></div>
+                  <div>Used: <span id="rateLimitSearchUsed">-</span></div>
+                  <div>Resets at: <span id="rateLimitSearchReset">-</span></div>
+                </div>
+              </div>
+              <div style="margin-bottom: 6px;">
+                <strong>GraphQL API:</strong>
+                <div style="padding-left: 16px; font-family: monospace;">
+                  <div>Remaining: <span id="rateLimitGraphqlRemaining">-</span></div>
+                  <div>Limit: <span id="rateLimitGraphqlLimit">-</span></div>
+                  <div>Used: <span id="rateLimitGraphqlUsed">-</span></div>
+                  <div>Resets at: <span id="rateLimitGraphqlReset">-</span></div>
+                </div>
+              </div>
+              <div style="margin-bottom: 6px;">
+                <strong>Integration Manifest:</strong>
+                <div style="padding-left: 16px; font-family: monospace;">
+                  <div>Remaining: <span id="rateLimitIntegrationRemaining">-</span></div>
+                  <div>Limit: <span id="rateLimitIntegrationLimit">-</span></div>
+                  <div>Used: <span id="rateLimitIntegrationUsed">-</span></div>
+                  <div>Resets at: <span id="rateLimitIntegrationReset">-</span></div>
+                </div>
+              </div>
+              <div style="margin-top: 12px; padding: 8px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 4px;">
+                <div style="font-weight: 600; margin-bottom: 4px; font-size: 13px;">⚠️ Secondary Rate Limit</div>
+                <div style="font-size: 12px; color: #856404; margin-bottom: 6px;">
+                  GitHub enforces a secondary rate limit (not shown in API) that limits:
+                </div>
+                <ul style="margin: 4px 0 4px 16px; padding: 0; font-size: 12px; color: #856404;">
+                  <li>No more than 100 concurrent requests</li>
+                  <li>No more than 900 points per minute for REST API</li>
+                  <li>No more than 90 seconds of CPU time per 60 seconds</li>
+                </ul>
+                <div style="font-size: 11px; color: #666; margin-top: 6px; font-style: italic;">
+                  If you get 403 errors even with remaining calls, you may have hit the secondary limit. Wait 1 minute and retry.
+                </div>
+              </div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #d0d7de; font-size: 12px; color: #656d76;">
+                <strong>Last updated:</strong> <span id="rateLimitLastUpdated" style="font-family: monospace;">-</span>
+              </div>
+            </div>
+          </details>
+          <button id="checkRateLimitBtn" type="button">Check Now</button>
         </div>
-        <p class="muted">The token is stored locally in your browser profile (chrome.storage.local). Do not commit it to source control.</p>
+        <p class="muted">Rate limit is checked automatically when you refetch images. Click "Check Now" to manually update.</p>
       </section>
 
       <section>
-        <h2>Cache</h2>
-        <p>Clear cached image lists stored by the extension.</p>
+        <label for="token">GitHub Personal Access Token</label>
+        <input id="token" type="password" placeholder="Paste token here (required for private repos)" />
         <div class="row">
-          <button id="clear-caches">Clear image caches</button>
+          <button id="save">Save token</button>
+          <button id="clear-token">Clear token</button>
+          <span id="token-status" role="status" aria-live="polite" style="margin-left: 12px; font-size: 13px;"></span>
         </div>
+        <p class="muted">Required to access the <strong>private</strong> repository vincentsijben/chrome-extension-github. Token needs full <strong>repo</strong> scope for private repos, or <strong>Contents: Read-only</strong> for fine-grained tokens. Stored locally in chrome.storage.local.</p>
       </section>
 
       <section>
@@ -33,6 +95,7 @@
         <p>Fetch fresh images from all categories. The extension will download the latest image lists from your GitHub Pages repository.</p>
         <div class="row">
           <button id="refetch-images">Refetch images</button>
+          <button id="clear-caches">Clear image caches</button>
         </div>
         <div id="image-counts" class="image-counts">
           <div class="count-item">
@@ -60,9 +123,9 @@
             <span id="count-facepalm" class="count-value">-</span>
           </div>
         </div>
+        <div id="status" role="status" aria-live="polite" style="margin-top: 12px;"></div>
       </section>
 
-      <div id="status" role="status" aria-live="polite"></div>
     </main>
     <script src="options.js"></script>
   </body>
