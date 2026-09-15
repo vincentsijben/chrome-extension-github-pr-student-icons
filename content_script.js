@@ -4,33 +4,149 @@
 (function () {
   'use strict';
 
-  const ICON_COUNT = 6;
+  const BASE = 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/';
 
-  const ICON_SVGS = [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="10" fill="#0366d6" /><text x="12" y="17" font-size="16" text-anchor="middle" fill="white">👍</text></svg>`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><rect x="2" y="2" width="20" height="20" rx="4" fill="#28a745" /><text x="12" y="17" font-size="14" text-anchor="middle" fill="white">🔗?</text></svg>`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><polygon points="2,18 22,18 20,6 4,6" fill="#ffab00" /><text x="12" y="16" font-size="14" text-anchor="middle" fill="black">💻?</text></svg>`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="10" fill="#d73a49" /><text x="12" y="17" font-size="16" text-anchor="middle" fill="white">🤡?</text></svg>`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><rect x="3" y="3" width="18" height="18" rx="3" fill="#6f42c1" /><text x="12" y="17" font-size="16" text-anchor="middle" fill="white">👎</text></svg>`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="10" fill="#ff66a3" /><text x="12" y="17" font-size="14" text-anchor="middle" fill="white">🆘</text></svg>`
+  // The four actions, in display order.
+  const ACTIONS = [
+    { key: 'like',     title: 'Thumbs up — like the work (optionally merge)', emoji: '👍', color: '#1f6feb' },
+    { key: 'slap',     title: 'Broken link — student did not post the Pages URL', emoji: '🔗', color: '#2da44e' },
+    { key: 'facepalm', title: 'Pages broken — the URL does not work',           emoji: '👎', color: '#8250df' },
+    { key: 'sad',      title: 'SOS — result is not what was asked',              emoji: '🆘', color: '#cf222e' }
   ];
 
-  function debug(...args) { try { console.debug('[gh-pr-icons]', ...args); } catch (e) {} }
+  // Hardcoded image URLs (GitHub Pages) — these render fine inside GitHub comments
+  const IMAGES = {
+    'like': [
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/great-success.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/i-approve.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/its-a-very-nice-i-like.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/very-nice-i-like.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/very-nice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/well-done.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/thumbs-up.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/when-your-work-is-lit.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/you-did-it.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/good-job.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/niiiiiice.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/niiiiice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/niiiice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/harold-approves.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/ass-kicking-approved.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/congrats.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/congrats-i-approve.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/nice-time-for-beer.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/whoohoow-its-a-very-nice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/awesome-i-like.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/thats-awesome.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/you-know-i-like.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/the-hoff-approves.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/this-project-nailed-it.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/nailed-it.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/that-feeling-when-youve-nailed-it.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/awesomeness.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/good-job-i-like.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/congratulations.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/awesome-awesome-to-the-max.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/thank-you.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/jo-approves.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/yes-i-approve.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/when-youve-nailed-your-project.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/when-your-work-is-approved.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/the-face-you-make-when-your-project-is-done.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/holy-moly-nice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/omg.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/wow.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/im-speechless.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/that-moment-you-realize-it-worked-out-great.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/oooh-thats-nice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/oh-wow-thats-nice.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/omg-awesome.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/whoohoow.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/yes-a-very-nice.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/mr-bean-approves.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/welllll-done.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/well-done-youve-kicked-ass.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/when-your-work-is-finally-approved.gif"
+    ],
+    'slap': [
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-police.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-batman.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-butthead.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-bears.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-penguins.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/you-did-not-post-the-url-forehead.gif"
+    ],
+    'sad': [
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/confession-bear.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/kim-jong-un-sad.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/happy-sad.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/sad-frog.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/kanye-sad.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/sad-donkey.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/michael-jordan-sad.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/denzel-happy-sad.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/disappointed-curry.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/disappointed-yoda.gif",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/disappointed.gif"
+    ],
+    'facepalm': [
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/captain-picard-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/double-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/putin-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/homer-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/captain-kirk-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/house-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/vader-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/batman-facepalm.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/one-does-not-simply-add-a-local-projectfolder-to-a-repo.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/oh-no.jpg",
+      "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/ohno.jpg"
+    ]
+  };
+
+  // Robust dark-mode detection. GitHub commonly uses data-color-mode="auto" with
+  // data-dark-theme / data-light-theme, so checking for "dark" alone is not enough.
+  function isDarkMode() {
+    try {
+      const html = document.documentElement;
+      const mode = (html.getAttribute('data-color-mode') || '').toLowerCase();
+      if (mode === 'dark') return true;
+      if (mode === 'light') return false;
+      if (mode === 'auto') {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      // Fallback: inspect the page background luminance
+      const bg = getComputedStyle(document.body).backgroundColor || '';
+      const m = bg.match(/\d+/g);
+      if (m && m.length >= 3) {
+        const [r, g, b] = m.map(Number);
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) < 128;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function applyTheme(el) {
+    el.classList.toggle('gh-pr-dark', isDarkMode());
+  }
 
   function createOverlay() {
     let o = document.querySelector('.gh-pr-overlay');
     if (o) return o;
     o = document.createElement('div');
     o.className = 'gh-pr-overlay';
-    o.style.position = 'fixed';
-    o.style.right = '12px';
-    o.style.bottom = '12px';
-    o.style.zIndex = '2147483647';
-    o.style.display = 'flex';
-    o.style.flexDirection = 'column';
-    o.style.alignItems = 'center';
-    o.style.gap = '6px';
+    applyTheme(o);
     document.documentElement.appendChild(o);
+
+    // Re-apply theme when GitHub or the OS switches color scheme
+    try {
+      new MutationObserver(() => applyTheme(o)).observe(document.documentElement, {
+        attributes: true, attributeFilter: ['data-color-mode', 'data-dark-theme', 'data-light-theme']
+      });
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(o));
+      }
+    } catch (e) {}
     return o;
   }
 
@@ -40,242 +156,95 @@
       if (!t) {
         t = document.createElement('div');
         t.className = 'gh-pr-toast';
-        t.style.position = 'fixed';
-        t.style.left = '50%';
-        t.style.bottom = '14px';
-        t.style.transform = 'translateX(-50%)';
-        t.style.background = 'rgba(0,0,0,0.85)';
-        t.style.color = '#fff';
-        t.style.padding = '8px 12px';
-        t.style.borderRadius = '6px';
-        t.style.zIndex = '2147483647';
-        t.style.fontSize = '13px';
-        t.style.pointerEvents = 'none';
         document.documentElement.appendChild(t);
       }
       t.textContent = msg;
-      t.style.display = 'block';
-      t.style.opacity = '1';
-      setTimeout(() => { try { t.style.opacity = '0'; setTimeout(() => { t.style.display = 'none'; }, 200); } catch (e) {} }, ms);
+      t.classList.add('show');
+      clearTimeout(t._hideTimer);
+      t._hideTimer = setTimeout(() => t.classList.remove('show'), ms);
     } catch (e) { console.error('[gh-pr-icons] showToast error:', e); }
   }
 
-  function ensureTooltip() {
-    const o = createOverlay();
-    let tip = o.querySelector('.gh-pr-tooltip');
-    if (!tip) {
-      tip = document.createElement('div');
-      tip.className = 'gh-pr-tooltip';
-      tip.style.position = 'fixed';
-      tip.style.padding = '6px 8px';
-      tip.style.background = 'rgba(0,0,0,0.9)';
-      tip.style.color = '#fff';
-      tip.style.borderRadius = '4px';
-      tip.style.fontSize = '12px';
-      tip.style.pointerEvents = 'none';
-      tip.style.zIndex = '2147483647';
-      tip.style.display = 'none';
-      o.appendChild(tip);
-    }
-    return tip;
-  }
+  function makeCheckbox(id, labelText, storageKey, defaultChecked, onChange) {
+    const row = document.createElement('label');
+    row.className = 'gh-pr-check';
+    row.htmlFor = id;
 
-  function showTooltip(el, text) {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = id;
+    input.checked = !!defaultChecked;
     try {
-      const tip = ensureTooltip();
-      tip.textContent = text;
-      const r = el.getBoundingClientRect();
-      const left = r.left + r.width / 2;
-      const top = r.top - 8;
-      tip.style.left = left + 'px';
-      tip.style.top = (top - tip.offsetHeight) + 'px';
-      tip.style.transform = 'translateX(-50%)';
-      tip.style.display = 'block';
+      chrome.storage.local.get([storageKey], (res) => {
+        try { if (res && typeof res[storageKey] === 'boolean') input.checked = res[storageKey]; } catch (e) {}
+      });
     } catch (e) {}
-  }
-  function hideTooltip() { try { const tip = ensureTooltip(); tip.style.display = 'none'; } catch (e) {} }
+    input.addEventListener('change', () => onChange(input.checked));
 
-  // build UI controls used previously: toggle, refresh, options, test API button
-  function buildToggle(container) {
-    try {
-      const wrapper = document.createElement('div');
-      wrapper.style.display = 'flex';
-      wrapper.style.alignItems = 'center';
-      wrapper.style.gap = '12px';
+    const text = document.createElement('span');
+    text.textContent = labelText;
 
-      // Auto-submit toggle
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.id = 'gh-pr-auto-submit-toggle';
-      try {
-        chrome.storage.local.get([AUTO_SUBMIT_KEY], (res) => {
-          try { input.checked = !!(res && res[AUTO_SUBMIT_KEY]); } catch (e) { input.checked = getAutoSubmit(); }
-        });
-      } catch (e) { input.checked = getAutoSubmit(); }
-      input.addEventListener('change', () => { setAutoSubmit(input.checked); showToast(`Auto-submit ${input.checked ? 'on' : 'off'}`); });
-      const label = document.createElement('label');
-      label.htmlFor = input.id;
-      label.textContent = 'Auto-submit';
-      label.style.fontSize = '12px';
-      label.style.color = '#222';
-      wrapper.appendChild(input);
-      wrapper.appendChild(label);
-
-      // Merge-after-like toggle
-      const mergeInput = document.createElement('input');
-      mergeInput.type = 'checkbox';
-      mergeInput.id = 'gh-pr-merge-after-like-toggle';
-      try {
-        chrome.storage.local.get(['gh_pr_icons_merge_after_like'], (res) => {
-          try { mergeInput.checked = !!(res && res['gh_pr_icons_merge_after_like']); } catch (e) { mergeInput.checked = false; }
-        });
-      } catch (e) { mergeInput.checked = false; }
-      mergeInput.addEventListener('change', () => {
-        chrome.storage.local.set({ 'gh_pr_icons_merge_after_like': mergeInput.checked });
-        showToast(`Merge after like ${mergeInput.checked ? 'on' : 'off'}`);
-      });
-      const mergeLabel = document.createElement('label');
-      mergeLabel.htmlFor = mergeInput.id;
-      mergeLabel.textContent = 'Merge after like';
-      mergeLabel.style.fontSize = '12px';
-      mergeLabel.style.color = '#222';
-      wrapper.appendChild(mergeInput);
-      wrapper.appendChild(mergeLabel);
-
-      container.appendChild(wrapper);
-      return wrapper;
-    } catch (e) { return null; }
-  }
-
-  function buildRefresh(container) {
-    try {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = 'Refresh images';
-      b.style.fontSize = '12px';
-      b.addEventListener('click', async () => {
-        const cats = [
-          'https://vincentsijben.github.io/chrome-extension-github/images/like/',
-          'https://vincentsijben.github.io/chrome-extension-github/images/slap/',
-          'https://vincentsijben.github.io/chrome-extension-github/images/missing-screenshot/',
-          'https://vincentsijben.github.io/chrome-extension-github/images/missing-profile-picture/',
-          'https://vincentsijben.github.io/chrome-extension-github/images/sad/',
-          'https://vincentsijben.github.io/chrome-extension-github/images/facepalm/'
-        ];
-        try {
-          const keys = cats.map(c => `gh_pr_images_${c}`);
-          chrome.storage.local.remove(keys, () => {});
-        } catch (e) {}
-        showToast('Cleared image caches — fetching...');
-        // prefetch: trigger background fetch via fetchImages action for each category (best-effort)
-        for (const c of cats) {
-          try { chrome.runtime.sendMessage({ action: 'fetchImages', url: c }, () => {}); } catch (e) {}
-        }
-      });
-      container.appendChild(b);
-      return b;
-    } catch (e) { return null; }
-  }
-
-  function buildTestApiButton(container) {
-    try {
-      const tb = document.createElement('button');
-      tb.type = 'button';
-      tb.textContent = 'Test API (like)';
-      tb.style.fontSize = '12px';
-      tb.title = 'Call the Contents API for docs/images/like in the example repo';
-      tb.addEventListener('click', async () => {
-        const owner = 'vincentsijben';
-        const repo = 'chrome-extension-github';
-        const path = 'docs/images/like';
-        const stored = await getStoredToken();
-        if (!stored) { showToast('No token set — open Options to add a token'); return; }
-        showToast('Testing API...');
-        const resp = await new Promise(resolve => chrome.runtime.sendMessage({ action: 'fetchImagesApi', owner, repo, path, token: stored }, r => resolve(r)));
-        if (!resp) { showToast('No response from extension API'); return; }
-        if (!resp.ok) { showToast('API error: ' + (resp.error || 'unknown')); return; }
-        showToast('API returned ' + (resp.images ? resp.images.length : 0) + ' images');
-      });
-      container.appendChild(tb);
-      return tb;
-    } catch (e) { return null; }
+    row.appendChild(input);
+    row.appendChild(text);
+    return row;
   }
 
   function buildOverlay() {
     const o = createOverlay();
-    // top controls: toggle, refresh, options, test
-    const controls = document.createElement('div');
-    controls.style.display = 'flex';
-    controls.style.flexDirection = 'column';
-    controls.style.alignItems = 'center';
-    controls.style.gap = '6px';
-    controls.style.marginBottom = '6px';
+    o.textContent = '';
 
-    buildToggle(controls);
-
+    // Header
+    const header = document.createElement('div');
+    header.className = 'gh-pr-header';
+    const title = document.createElement('span');
+    title.className = 'gh-pr-title';
+    title.textContent = 'PR reply';
     const opt = document.createElement('button');
     opt.type = 'button';
+    opt.className = 'gh-pr-btn gh-pr-btn-small';
     opt.textContent = 'Options';
-    opt.style.fontSize = '12px';
+    opt.title = 'Open extension options';
     opt.addEventListener('click', () => {
-      try { chrome.runtime.sendMessage({ action: 'openOptions' }, (resp) => { if (!resp || !resp.ok) { try { chrome.runtime.openOptionsPage(); } catch (e) { window.open(chrome.runtime.getURL('options.html')); } } }); } catch (e) { try { chrome.runtime.openOptionsPage(); } catch (e2) { window.open(chrome.runtime.getURL('options.html')); } }
+      try {
+        chrome.runtime.sendMessage({ action: 'openOptions' }, (resp) => {
+          if (!resp || !resp.ok) { try { chrome.runtime.openOptionsPage(); } catch (e) { window.open(chrome.runtime.getURL('options.html')); } }
+        });
+      } catch (e) { try { chrome.runtime.openOptionsPage(); } catch (e2) { window.open(chrome.runtime.getURL('options.html')); } }
     });
-    controls.appendChild(opt);
+    header.appendChild(title);
+    header.appendChild(opt);
+    o.appendChild(header);
 
-    o.appendChild(controls);
+    // Settings
+    const settings = document.createElement('div');
+    settings.className = 'gh-pr-settings';
+    settings.appendChild(makeCheckbox('gh-pr-auto-submit-toggle', 'Auto-submit', AUTO_SUBMIT_KEY, true, (v) => {
+      setAutoSubmit(v); showToast(`Auto-submit ${v ? 'on' : 'off'}`);
+    }));
+    settings.appendChild(makeCheckbox('gh-pr-merge-after-like-toggle', 'Merge after like', MERGE_AFTER_LIKE_KEY, false, (v) => {
+      try { chrome.storage.local.set({ [MERGE_AFTER_LIKE_KEY]: v }); } catch (e) {}
+      showToast(`Merge after like ${v ? 'on' : 'off'}`);
+    }));
+    o.appendChild(settings);
 
-    // status area
-    const status = document.createElement('div');
-    status.className = 'gh-pr-status';
-    status.style.fontSize = '12px';
-    status.style.color = '#444';
-    status.style.margin = '6px 0';
-    status.style.minWidth = '200px';
-    status.style.maxWidth = '320px';
-    status.style.display = 'none';
-    o.appendChild(status);
-
-    const TITLES = [
-      'Thumbs up — insert a like',
-      'Broken link — insert a link placeholder',
-      'Missing screenshot — insert a screenshot placeholder',
-      'Missing profile picture — insert a profile placeholder',
-      'Pages broken — insert a thumbs down / pages-not-working',
-      'SOS — result not what was asked / other'
-    ];
-
+    // Action buttons
     const iconsRow = document.createElement('div');
-    iconsRow.style.display = 'flex';
-    iconsRow.style.flexDirection = 'row';
-    iconsRow.style.alignItems = 'center';
-    iconsRow.style.gap = '8px';
-    iconsRow.style.background = 'transparent';
-    iconsRow.style.padding = '6px';
-    iconsRow.style.borderRadius = '6px';
-
-    for (let i = 1; i <= ICON_COUNT; i++) {
+    iconsRow.className = 'gh-pr-icons';
+    ACTIONS.forEach((action, i) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'gh-pr-icon-btn';
-      btn.style.border = 'none';
-      btn.style.background = 'transparent';
-      btn.style.cursor = 'pointer';
-      btn.style.padding = '6px';
-      btn.style.display = 'inline-flex';
-      btn.style.alignItems = 'center';
-      btn.style.justifyContent = 'center';
-      btn.innerHTML = ICON_SVGS[i - 1];
-      btn.addEventListener('mouseenter', () => showTooltip(btn, TITLES[i - 1]));
-      btn.addEventListener('mouseleave', hideTooltip);
+      btn.title = action.title;
+      btn.setAttribute('aria-label', action.title);
+      btn.style.background = action.color;
+      btn.textContent = action.emoji;
       btn.addEventListener('click', async (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        const form = findActiveForm();
-        await performAction(i, form);
+        await performAction(i + 1, findActiveForm());
       });
       iconsRow.appendChild(btn);
-    }
-
+    });
     o.appendChild(iconsRow);
   }
 
@@ -292,16 +261,11 @@
 
   function dispatchInputChange(el) { try { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {} }
 
-  async function pickRandomImageForCategory(baseUrl) {
-    try {
-      const cacheKey = `gh_pr_images_${baseUrl}`;
-      const list = await new Promise(r => { try { chrome.storage.local.get([cacheKey], res => r(res && res[cacheKey] ? res[cacheKey] : [])); } catch (e) { r([]); } });
-      if (!list || !list.length) return null;
-      return list[Math.floor(Math.random() * list.length)];
-    } catch (e) { return null; }
+  function pickRandomImage(key) {
+    const list = IMAGES[key];
+    if (!list || !list.length) return null;
+    return list[Math.floor(Math.random() * list.length)];
   }
-
-  function mapToPagesUrl(url) { try { const u = new URL(url); if (/github\.io$/i.test(u.hostname)) return `${u.protocol}//${u.hostname}${u.pathname}`; if (/raw\.githubusercontent\.com$/i.test(u.hostname)) { const parts = u.pathname.split('/').filter(Boolean); if (parts.length >= 4) { const owner = parts[0], repo = parts[1]; const rest = parts.slice(3).join('/').replace(/^docs\//, ''); return `https://${owner}.github.io/${repo}/${rest}`; } } return url; } catch (e) { return url; } }
 
   function parsePullFromUrl(url) {
     try {
@@ -325,26 +289,25 @@
       if (!form) form = findActiveForm();
       if (!form) { showToast('No composer form found'); return; }
 
-      const folders = {
-        1: 'https://vincentsijben.github.io/chrome-extension-github/images/like/',
-        2: 'https://vincentsijben.github.io/chrome-extension-github/images/slap/',
-        3: 'https://vincentsijben.github.io/chrome-extension-github/images/missing-screenshot/',
-        4: 'https://vincentsijben.github.io/chrome-extension-github/images/missing-profile-picture/',
-        5: 'https://vincentsijben.github.io/chrome-extension-github/images/sad/',
-        6: 'https://vincentsijben.github.io/chrome-extension-github/images/facepalm/'
-      };
-
-      if (idx >= 1 && idx <= 6) {
+      const action = ACTIONS[idx - 1];
+      if (action) {
         const ta = form.querySelector('textarea, textarea.js-comment-field, textarea[name="comment[body]"]');
         if (!ta) { showToast('No composer textarea found'); return; }
-        const cat = folders[idx];
-        const imgUrl = await pickRandomImageForCategory(cat);
-        if (!imgUrl) { 
-          showToast('No images available — open Options and click "Refetch images"', 5000);
-          return; 
+        const imgUrl = pickRandomImage(action.key);
+        if (!imgUrl) { showToast('No images available'); return; }
+        let markdown = '';
+
+        if (action.key === 'like') {
+          markdown = `![](${imgUrl})\n`;
+        } else if (action.key === 'slap') {
+          markdown = `URL? 🤷‍♂️ <BR><BR>![omg](${imgUrl})<BR>Plaats de GitHub Pages URL (via settings - pages te vinden) in de omschrijving van je comment. Plaats die URL **níet** in de title want dan is de link niet clickable!\n`;
+        } else if (action.key === 'facepalm') {
+          markdown = `❌❌ Aiiii, de URL werkt niet... ❌❌<BR><BR>![omg](${imgUrl})<BR>Heb je de juiste URL gepost (via settings - pages vind je de juiste URL)?<BR><BR>Controleer áltijd eerst zélf of de GitHub Pages URL wel werkt voordat je de Pull Request indient. Wellicht heb je de lokale projectmap óók mee geupload. Je moet énkel de ínhoud van je lokale projectmap uploaden naar de root van je branch.<BR><BR>`;
+          markdown += `Check wat er mis is, fix de branch, controleer eerst zélf de GitHub Pages opnieuw en pas als deze het correcte resultaat toont, stuur je een nieuwe comment in deze Pull Request zodat ik een notify krijg 👍👍\n`;
+        } else if (action.key === 'sad') {
+          markdown = `🧐🤨😲😧😯 Hmm, de URL toont niet het juiste resultaat 💔<BR><BR>![omg](${imgUrl})<BR>Controleer áltijd eerst zélf of de GitHub Pages URL het juiste resultaat weergeeft voordat je de Pull Request indient.<BR><BR>`;
+          markdown += `Check wat er mis is, fix de branch, controleer eerst zélf de GitHub Pages opnieuw en pas als deze het correcte resultaat toont, stuur je een nieuwe comment in deze Pull Request zodat ik een notify krijg 👍👍\n`;
         }
-        const pages = mapToPagesUrl(imgUrl);
-        const markdown = `![](${pages})\n`;
         
         // Always use DOM manipulation (no API posting)
         ta.value = markdown;
@@ -362,10 +325,10 @@
           // If this is the like button and merge-after-like is enabled, wait for comment then merge
           const mergeAfterLike = await getMergeAfterLike();
           console.log('[gh-pr-icons] Icon index:', idx, 'Merge-after-like setting:', mergeAfterLike);
-          if (idx === 1 && mergeAfterLike) {
+          if (action.key === 'like' && mergeAfterLike) {
             console.log('[gh-pr-icons] Merge-after-like enabled, starting merge flow');
             showToast('Waiting for posted comment to appear...');
-            const found = await waitForCommentPost(pages, 12000);
+            const found = await waitForCommentPost(imgUrl, 12000);
             if (!found) { 
               console.log('[gh-pr-icons] Comment not detected, aborting');
               showToast('Posted comment not detected — aborting merge', 5000); 
@@ -568,49 +531,21 @@
   async function getMergeAfterLike() {
     return new Promise((resolve) => {
       try {
-        chrome.storage.local.get(['gh_pr_icons_merge_after_like'], (res) => {
-          resolve(!!(res && res['gh_pr_icons_merge_after_like']));
+        chrome.storage.local.get([MERGE_AFTER_LIKE_KEY], (res) => {
+          resolve(!!(res && res[MERGE_AFTER_LIKE_KEY]));
         });
       } catch (e) { resolve(false); }
     });
   }
 
-  // Helper to get stored GitHub token
-  async function getStoredToken() {
-    return new Promise((resolve) => {
-      try {
-        chrome.storage.local.get(['githubToken'], (res) => {
-          resolve(res && res.githubToken ? res.githubToken : null);
-        });
-      } catch (e) { resolve(null); }
-    });
-  }
-
   const AUTO_SUBMIT_KEY = 'gh_pr_icons_auto_submit';
+  const MERGE_AFTER_LIKE_KEY = 'gh_pr_icons_merge_after_like';
   let _autoSubmit = true;
-  try { chrome.storage.local.get([AUTO_SUBMIT_KEY], (res) => { if (res && (res[AUTO_SUBMIT_KEY] === true || res[AUTO_SUBMIT_KEY] === '1')) _autoSubmit = true; else if (res && res[AUTO_SUBMIT_KEY] === false) _autoSubmit = false; }); } catch (e) {}
+  try { chrome.storage.local.get([AUTO_SUBMIT_KEY], (res) => { if (res && res[AUTO_SUBMIT_KEY] === false) _autoSubmit = false; }); } catch (e) {}
   function getAutoSubmit() { return _autoSubmit; }
   function setAutoSubmit(v) { try { _autoSubmit = !!v; chrome.storage.local.set({ [AUTO_SUBMIT_KEY]: _autoSubmit }); } catch (e) {} }
 
-  // ...existing code...
-
-  function attemptAutoSubmit(form, submit) {
-    try {
-      const now = Date.now();
-      const last = parseInt(form.dataset.ghPrAutoSubmittedAt || '0', 10) || 0;
-      if (now - last < 5000) return false;
-      form.dataset.ghPrAutoSubmittedAt = String(now);
-      try { if (submit.disabled) { submit.disabled = false; submit.removeAttribute('disabled'); submit.setAttribute('aria-disabled', 'false'); } } catch (e) {}
-      setTimeout(() => { try { submit.click(); showToast('Posting comment...'); scheduleReinject(); } catch (e) {} }, 150);
-      return true;
-    } catch (e) { return false; }
-  }
-
-  async function showNoImagesAdvice() { try { const token = await getStoredToken(); if (!token) showToast('No images found — if these images are private, add a token via Options', 6000); else showToast('No images found', 3000); } catch (e) { showToast('No images found', 3000); } }
-
-  function scheduleReinject() { [200,400,800,1200].forEach(d => setTimeout(() => {/* no-op for overlay-only mode */}, d)); }
-
-  // ...existing code...
+  function scheduleReinject() { /* no-op for overlay-only mode */ }
 
   function start() { 
     try {

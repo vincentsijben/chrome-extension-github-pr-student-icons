@@ -12,24 +12,20 @@
   console.log('[gh-pr-icons][options] script loaded');
 
   const CATEGORIES = [
-    { id: 'like', url: 'https://vincentsijben.github.io/chrome-extension-github/images/like/', element: 'count-like' },
-    { id: 'slap', url: 'https://vincentsijben.github.io/chrome-extension-github/images/slap/', element: 'count-slap' },
-    { id: 'screenshot', url: 'https://vincentsijben.github.io/chrome-extension-github/images/missing-screenshot/', element: 'count-screenshot' },
-    { id: 'profile', url: 'https://vincentsijben.github.io/chrome-extension-github/images/missing-profile-picture/', element: 'count-profile' },
-    { id: 'sad', url: 'https://vincentsijben.github.io/chrome-extension-github/images/sad/', element: 'count-sad' },
-    { id: 'facepalm', url: 'https://vincentsijben.github.io/chrome-extension-github/images/facepalm/', element: 'count-facepalm' }
+    { id: 'like', url: 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/like/', element: 'count-like' },
+    { id: 'slap', url: 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/slap/', element: 'count-slap' },
+    { id: 'sad', url: 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/sad/', element: 'count-sad' },
+    { id: 'facepalm', url: 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/', element: 'count-facepalm' }
   ];
 
   // Map categories to GitHub API paths (more reliable than scraping pages)
   // Repository structure: /docs/images/ (GitHub Pages served from /docs)
   const API_INFO = {
     owner: 'vincentsijben',
-    repo: 'chrome-extension-github',
+    repo: 'chrome-extension-github-pr-student-icons',
     paths: {
       like: 'docs/images/like',
       slap: 'docs/images/slap',
-      screenshot: 'docs/images/missing-screenshot',
-      profile: 'docs/images/missing-profile-picture',
       sad: 'docs/images/sad',
       facepalm: 'docs/images/facepalm'
     }
