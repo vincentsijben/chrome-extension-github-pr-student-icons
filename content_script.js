@@ -6,12 +6,13 @@
 
   const BASE = 'https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/';
 
-  // The four actions, in display order.
+  // The actions, in display order.
   const ACTIONS = [
-    { key: 'like',     title: 'Thumbs up — like the work (optionally merge)', emoji: '👍', color: '#1f6feb' },
-    { key: 'slap',     title: 'Broken link — student did not post the Pages URL', emoji: '🔗', color: '#2da44e' },
-    { key: 'facepalm', title: 'Pages broken — the URL does not work',           emoji: '👎', color: '#8250df' },
-    { key: 'sad',      title: 'SOS — result is not what was asked',              emoji: '🆘', color: '#cf222e' }
+    { key: 'like',        title: 'Thumbs up — like the work (optionally merge)',        emoji: '👍', color: '#1f6feb' },
+    { key: 'slap',        title: 'Broken link — student did not post the Pages URL',    emoji: '🔗', color: '#2da44e' },
+    { key: 'facepalm',    title: 'Pages broken — the URL does not work',                emoji: '👎', color: '#8250df' },
+    { key: 'sad',         title: 'SOS — result is not what was asked',                   emoji: '🆘', color: '#cf222e' },
+    { key: 'multiple_pr', title: 'Multiple PRs — student opened more than one PR (#2+)', emoji: '1️⃣', color: '#bf8700' }
   ];
 
   // Hardcoded image URLs (GitHub Pages) — these render fine inside GitHub comments
@@ -103,6 +104,14 @@
       "https://vincentsijben.github.io/chrome-extension-github-pr-student-icons/images/facepalm/ohno.jpg"
     ]
   };
+
+  // Student opened more than one PR. For now reuse slap + sad + facepalm;
+  // dedicated images can be added to docs/images/multiple-pr/ later.
+  IMAGES.multiple_pr = [
+    ...IMAGES.slap,
+    ...IMAGES.sad,
+    ...IMAGES.facepalm
+  ];
 
   // Robust dark-mode detection. GitHub commonly uses data-color-mode="auto" with
   // data-dark-theme / data-light-theme, so checking for "dark" alone is not enough.
@@ -307,6 +316,9 @@
         } else if (action.key === 'sad') {
           markdown = `🧐🤨😲😧😯 Hmm, de URL toont niet het juiste resultaat 💔<BR><BR>![omg](${imgUrl})<BR>Controleer áltijd eerst zélf of de GitHub Pages URL het juiste resultaat weergeeft voordat je de Pull Request indient.<BR><BR>`;
           markdown += `Check wat er mis is, fix de branch, controleer eerst zélf de GitHub Pages opnieuw en pas als deze het correcte resultaat toont, stuur je een nieuwe comment in deze Pull Request zodat ik een notify krijg 👍👍\n`;
+        } else if (action.key === 'multiple_pr') {
+          markdown = `✋ Stop! Nog een Pull Request? 🙅‍♂️<BR><BR>![omg](${imgUrl})<BR>Je hebt **slechts één** Pull Request nodig. Ook als je later nog fouten fixt in je bestanden: elke nieuwe commit op je branch wordt **automatisch** meegenomen in die ene, al openstaande Pull Request. Je hoeft dus nóóit een tweede PR aan te maken.<BR><BR>`;
+          markdown += `Om dit netjes op te lossen: stuur **Vincent via Teams** even een bevestiging dat hij deze repo in z'n geheel mag verwijderen. Daarna kun je alles opnieuw, netjes, inleveren middels één enkele Pull Request 👍\n`;
         }
         
         // Always use DOM manipulation (no API posting)
